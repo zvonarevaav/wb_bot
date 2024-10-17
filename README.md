@@ -1,4 +1,4 @@
-[![Typing SVG](https://readme-typing-svg.herokuapp.com?color=%2336BCF7&lines=Wildberries+Botl)](https://git.io/typing-svg)
+[![Typing SVG](https://readme-typing-svg.herokuapp.com?color=%2336BCF7&lines=Wildberries+Bot)](https://git.io/typing-svg)
 
 Это телеграм-бот, созданный для установки и управления напоминаниями. Бот помогает пользователям создавать задачи, устанавливать для них напоминания на основе временных интервалов (минуты, часы, дни, недели, месяцы) и просматривать активные задачи.
 
