@@ -15,9 +15,10 @@ class ReminderBot:
         reminder_time = datetime.now() + delta
 
         logging.info(f"Устанавливаем напоминание на: {reminder_time}")
-        await message.answer(f"Задача принята: '{task}'. Напомню через {amount} {unit}.")
 
+        # Чтобы избежать дублирования сообщений, проверяем, если задача уже создана
         try:
+            # Добавляем задачу в планировщик
             self.scheduler.add_job(
                 self.send_reminder_async,
                 DateTrigger(run_date=reminder_time),
@@ -25,6 +26,9 @@ class ReminderBot:
                 id=f"reminder_{message.chat.id}_{task}"
             )
             logging.info(f"Напоминание установлено на задачу: {task}, время: {reminder_time}")
+
+            # Отправляем только одно сообщение после успешного добавления задачи
+            await message.answer(f"Задача '{task}' создана и напоминание установлено через {amount} {unit}.")
         except Exception as e:
             logging.error(f"Ошибка при добавлении задачи в планировщик: {e}")
 

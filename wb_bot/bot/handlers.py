@@ -27,10 +27,8 @@ async def create_reminder_handler(callback_query: types.CallbackQuery):
     await callback_query.message.answer("Введите задачу:")
     user_data[callback_query.from_user.id] = {"step": "waiting_for_task"}
     logging.info(f"user_data после выбора кнопки: {user_data}")
-    await callback_query.answer() # Чтобы дать понять Телеграму что мы обработали это нажатие клавиши, и пора перестать её грузить(анимациюю)
+    await callback_query.answer()  # Сообщаем Telegram, что запрос обработан
 
-
-# handlers.py
 
 # Обработка ввода задачи
 async def handle_task_message(message: types.Message, reminder_bot: ReminderBot):
@@ -49,7 +47,7 @@ async def handle_task_message(message: types.Message, reminder_bot: ReminderBot)
     logging.info(f"Пользователь {message.from_user.id} ввел задачу: {task}")
     logging.info(f"user_data после ввода задачи: {user_data}")
 
-    await message.answer("Выберите единицу времени (min, h, d, w):", reply_markup=create_time_unit_buttons())
+    await message.answer("Выберите единицу времени (min, h, d, w, mo):", reply_markup=create_time_unit_buttons())
 
 
 # Обработка выбора единицы времени
@@ -69,7 +67,7 @@ async def time_unit_handler(callback_query: types.CallbackQuery):
     logging.info(f"Пользователь {callback_query.from_user.id} выбрал единицу времени: {unit}")
     logging.info(f"user_data после выбора единицы времени: {user_data}")
     await callback_query.message.answer(f"Введите количество {unit}:")
-    await callback_query.answer() # Аналогично тому что мы сделали в `create_reminder_handler`
+    await callback_query.answer()  # Сообщаем Telegram, что запрос обработан
 
 
 # Обработка ввода времени
@@ -98,13 +96,12 @@ async def handle_time_message(message: types.Message, reminder_bot: ReminderBot)
 
     logging.info(f"Пользователь {message.from_user.id} вводит время для задачи: {task}, количество: {amount} {unit}")
 
-    # Устанавливаем напоминание
+    # Устанавливаем напоминание (сообщение об успешном добавлении задачи теперь только здесь)
     await reminder_bot.set_reminder(message, task, amount, unit)
-    logging.info(f"Напоминание для задачи '{task}' через {amount} {unit} установлено.")
-    await message.answer(f"Задача '{task}' создана и напоминание установлено через {amount} {unit}.")
 
     # Очищаем данные пользователя
     del user_data[message.from_user.id]
+
 
 # Обертка для передачи reminder_bot
 def create_task_handler(handler_func, reminder_bot):
@@ -115,15 +112,16 @@ def create_task_handler(handler_func, reminder_bot):
     return wrapper
 
 
-
 # Регистрация всех обработчиков
 def register_handlers(dp: Dispatcher, bot: Bot, scheduler: AsyncIOScheduler):
     reminder_bot = ReminderBot(bot, scheduler)
 
     dp.message.register(send_welcome, Command("start"))
     dp.callback_query.register(create_reminder_handler, lambda c: c.data == 'create_reminder')
-    dp.callback_query.register(time_unit_handler, lambda c: c.data in ['min', 'h', 'd', 'w'])
+    dp.callback_query.register(time_unit_handler, lambda c: c.data in ['min', 'h', 'd', 'w', 'mo'])
 
     # Регистрация обработчиков с передачей reminder_bot через обертку
-    dp.message.register(create_task_handler(handle_task_message, reminder_bot), lambda m: user_data[m.from_user.id].get("task") is None) # Добавить сюда фильтр который будет проверять нету ли уже задачи. Он тут нужен так как у нас `handle_task_message` стоит выше(буквально выше), а у нас python с верху в низ всё проверяет и уже этот handler `handle_task_message` будет отлавливать все сообщения типа Message первее остальных и они не попадут в желаемый handler `handle_time_message`.
-    dp.message.register(create_task_handler(handle_time_message, reminder_bot))
+    dp.message.register(create_task_handler(handle_task_message, reminder_bot),
+                        lambda m: user_data[m.from_user.id].get("step") == "waiting_for_task")
+    dp.message.register(create_task_handler(handle_time_message, reminder_bot),
+                        lambda m: user_data[m.from_user.id].get("step") == "waiting_for_time_amount")
