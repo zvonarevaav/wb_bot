@@ -6,7 +6,9 @@ from bot.handlers import register_handlers
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 import os
-from bot.data import load_user_data, save_user_data
+
+# Импортируем сессию из models.py
+from bot.models import Session
 
 # Загружаем переменные окружения
 load_dotenv()
@@ -20,7 +22,6 @@ if not API_TOKEN:
 # Настраиваем логирование
 logging.basicConfig(level=logging.INFO)
 
-
 # Главная функция для запуска бота
 async def main():
     bot = Bot(token=API_TOKEN)
@@ -29,21 +30,17 @@ async def main():
     # Планировщик
     scheduler = AsyncIOScheduler()
 
-    # Загрузка данных пользователей при старте
-    load_user_data()
+    # Создаем сессию для работы с базой данных
+    session = Session()
 
     # Регистрируем обработчики
-    register_handlers(dp, bot, scheduler)
+    register_handlers(dp, bot, scheduler, session)
 
     # Запускаем планировщик
     scheduler.start()
 
     # Запускаем long-polling
-    try:
-        await dp.start_polling(bot)
-    finally:
-        # Сохранение данных пользователей при завершении работы
-        save_user_data()
+    await dp.start_polling(bot)
 
 
 # Запуск бота

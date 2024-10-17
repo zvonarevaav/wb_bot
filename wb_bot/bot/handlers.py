@@ -23,8 +23,11 @@ async def send_welcome(message: types.Message):
 # Обработка кнопки "Создать напоминание"
 async def create_reminder_handler(callback_query: types.CallbackQuery):
     logging.info(f"Пользователь {callback_query.from_user.id} нажал кнопку 'Создать напоминание'")
-    await callback_query.message.answer("Введите задачу:")
+
+    # Обязательно добавляем данные о пользователе
     user_data[callback_query.from_user.id] = {"step": "waiting_for_task"}
+
+    await callback_query.message.answer("Введите задачу:")
     logging.info(f"user_data после выбора кнопки: {user_data}")
     await callback_query.answer()
 
@@ -100,14 +103,14 @@ async def handle_time_message(message: types.Message, reminder_bot: ReminderBot)
 
 # Добавление команды для просмотра всех активных напоминаний
 async def view_reminders(message: types.Message, reminder_bot: ReminderBot):
-    reminders = reminder_bot.get_active_reminders(message.chat.id)
+    reminders = reminder_bot.get_active_reminders(message.from_user.id)
     if reminders:
-        reminder_list = "\n".join([f"{r['task']} через {r['time']} {r['unit']}" for r in reminders])
+        reminder_list = "\n".join([f"{r.task} - {r.time}" for r in reminders])
         await message.answer(f"Ваши активные напоминания:\n{reminder_list}")
     else:
         await message.answer("У вас нет активных напоминаний.")
 
-# Добавление команды для удаления напоминаний
+# Обработка команды удаления напоминаний
 async def delete_reminder(message: types.Message, reminder_bot: ReminderBot):
     task = message.text.split(" ", 1)[1]  # предполагаем, что команда выглядит как /delete <task>
     result = reminder_bot.delete_reminder(message.chat.id, task)
@@ -124,18 +127,22 @@ def create_task_handler(handler_func, reminder_bot):
     return wrapper
 
 # Регистрация всех обработчиков
-def register_handlers(dp: Dispatcher, bot: Bot, scheduler: AsyncIOScheduler):
-    reminder_bot = ReminderBot(bot, scheduler)
+def register_handlers(dp: Dispatcher, bot: Bot, scheduler: AsyncIOScheduler, session):
+    reminder_bot = ReminderBot(bot, scheduler, session)
 
     dp.message.register(send_welcome, Command("start"))
     dp.callback_query.register(create_reminder_handler, lambda c: c.data == 'create_reminder')
     dp.callback_query.register(time_unit_handler, lambda c: c.data in ['min', 'h', 'd', 'w', 'mo'])
 
-    dp.message.register(create_task_handler(handle_task_message, reminder_bot),
-                        lambda m: user_data[m.from_user.id].get("step") == "waiting_for_task")
-    dp.message.register(create_task_handler(handle_time_message, reminder_bot),
-                        lambda m: user_data[m.from_user.id].get("step") == "waiting_for_time_amount")
+    dp.message.register(
+        create_task_handler(handle_task_message, reminder_bot),
+        lambda m: user_data.get(m.from_user.id) and user_data[m.from_user.id].get("step") == "waiting_for_task"
+    )
+    dp.message.register(
+        create_task_handler(handle_time_message, reminder_bot),
+        lambda m: user_data.get(m.from_user.id) and user_data[m.from_user.id].get("step") == "waiting_for_time_amount"
+    )
 
-    # Регистрация команд для просмотра и удаления напоминаний
+    # Регистрация команды для просмотра всех напоминаний
     dp.message.register(create_task_handler(view_reminders, reminder_bot), Command("view"))
-    dp.message.register(create_task_handler(delete_reminder, reminder_bot), Command("delete"))
+
