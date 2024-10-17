@@ -6,6 +6,7 @@ from bot.handlers import register_handlers
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 import os
+from bot.data import load_user_data, save_user_data
 
 # Загружаем переменные окружения
 load_dotenv()
@@ -28,6 +29,9 @@ async def main():
     # Планировщик
     scheduler = AsyncIOScheduler()
 
+    # Загрузка данных пользователей при старте
+    load_user_data()
+
     # Регистрируем обработчики
     register_handlers(dp, bot, scheduler)
 
@@ -35,7 +39,11 @@ async def main():
     scheduler.start()
 
     # Запускаем long-polling
-    await dp.start_polling(bot)
+    try:
+        await dp.start_polling(bot)
+    finally:
+        # Сохранение данных пользователей при завершении работы
+        save_user_data()
 
 
 # Запуск бота
