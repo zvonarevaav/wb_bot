@@ -7,6 +7,11 @@ ENV PYTHONUNBUFFERED=1
 # Установим рабочую директорию внутри контейнера
 WORKDIR /app
 
+# Установим зависимости для работы с PostgreSQL и другими системными библиотеками
+RUN apt-get update && apt-get install -y \
+    libpq-dev gcc \
+    && rm -rf /var/lib/apt/lists/*
+
 # Копируем файл с зависимостями (requirements.txt) в контейнер
 COPY requirements.txt .
 
