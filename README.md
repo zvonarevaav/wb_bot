@@ -49,4 +49,8 @@ _2. Настройка проекта_
 Создайте и активируйте виртуальную среду (опционально, но рекомендуется):
 
     •	python -m venv venv
-    •	source venv/bin/activate  # Для Windows: venv\Scripts\activate
+    •	Для Windows: venv\Scripts\activate
+
+Установите зависимости:
+
+    •	pip install -r requirements.txt
