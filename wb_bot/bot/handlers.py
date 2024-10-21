@@ -1,3 +1,4 @@
+import asyncio  # Импортируем asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -101,24 +102,6 @@ async def handle_time_message(message: types.Message, reminder_bot: ReminderBot)
     # Очищаем данные пользователя
     del user_data[message.from_user.id]
 
-# Добавление команды для просмотра всех активных напоминаний
-async def view_reminders(message: types.Message, reminder_bot: ReminderBot):
-    reminders = reminder_bot.get_active_reminders(message.from_user.id)
-    if reminders:
-        reminder_list = "\n".join([f"{r.task} - {r.time}" for r in reminders])
-        await message.answer(f"Ваши активные напоминания:\n{reminder_list}")
-    else:
-        await message.answer("У вас нет активных напоминаний.")
-
-# Обработка команды удаления напоминаний
-async def delete_reminder(message: types.Message, reminder_bot: ReminderBot):
-    task = message.text.split(" ", 1)[1]  # предполагаем, что команда выглядит как /delete <task>
-    result = reminder_bot.delete_reminder(message.chat.id, task)
-    if result:
-        await message.answer(f"Напоминание '{task}' было удалено.")
-    else:
-        await message.answer(f"Напоминание '{task}' не найдено.")
-
 # Обертка для передачи reminder_bot
 def create_task_handler(handler_func, reminder_bot):
     async def wrapper(message: types.Message):
@@ -142,7 +125,4 @@ def register_handlers(dp: Dispatcher, bot: Bot, scheduler: AsyncIOScheduler, ses
         create_task_handler(handle_time_message, reminder_bot),
         lambda m: user_data.get(m.from_user.id) and user_data[m.from_user.id].get("step") == "waiting_for_time_amount"
     )
-
-    # Регистрация команды для просмотра всех напоминаний
-    dp.message.register(create_task_handler(view_reminders, reminder_bot), Command("view"))
 
